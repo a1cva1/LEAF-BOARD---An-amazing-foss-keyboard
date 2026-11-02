@@ -1,0 +1,36 @@
+name: Empty Repo
+
+# Wipes the previous source out of this repo, so a fresh zip can be
+# imported cleanly by the Build Leaf Board workflow.
+# Keeps: everything under .github/ (the workflow files) and lb2.zip.
+# Deletes: every other tracked file (old extracted source, old zips).
+# Run this BEFORE uploading lb2.zip — or after; lb2.zip is kept either way.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wipe:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Delete all previous code
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git ls-files | grep -v '^\.github/' | grep -v '^lb2\.zip$' | xargs -r git rm -q
+          if git diff --cached --quiet; then
+            echo "Nothing to wipe — repo is already empty."
+          else
+            git commit -m "Wipe previous source (fresh import next)"
+            git push origin "HEAD:${{ github.ref_name }}"
+            echo "Repo wiped. Remaining files:"
+            git ls-files
+          fi
+          
